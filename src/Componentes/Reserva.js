@@ -30,6 +30,7 @@ export default function Reserva({ reserva }) {
         if (confirmText === 'EXCLUIR') {
             dispatch(deleteReserva(reserva.id));
             setShowModal(false);
+            handleAtivarLoad2();
         }
     };
 
