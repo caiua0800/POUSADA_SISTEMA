@@ -1,0 +1,3 @@
+Edição de cliente
+	não puxa o CEP,
+	não salva maiúsculo

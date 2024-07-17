@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import styled from 'styled-components';
 import { useDispatch, useSelector } from 'react-redux';
 import { cadastrarCliente, resetCadastroStatus } from '../Redux/reducers/Cliente/cadastroSlice';
+import { setLoading } from '../Redux/reducers/Load/loadingSlice';
 
 export default function CadastrarCliente() {
     const dispatch = useDispatch();
@@ -14,26 +15,49 @@ export default function CadastrarCliente() {
     const [endereco, setEndereco] = useState({ rua: '', numero: '', bairro: '', cep: '', cidade: '' });
     const [dataDeNascimento, setDataDeNascimento] = useState('');
 
+    const formatDate = (dateString) => {
+        const [year, month, day] = dateString.split('-');
+        return `${day}/${month}/${year}`;
+    };
+
+    function gerarStringAleatoria(tamanho) {
+        const caracteres = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+-=[]{}|;:,.<>?';
+        let resultado = '';
+        for (let i = 0; i < tamanho; i++) {
+            const indiceAleatorio = Math.floor(Math.random() * caracteres.length);
+            resultado += caracteres.charAt(indiceAleatorio);
+        }
+        return resultado;
+    }
+
+    const handleAtivarLoad = async () => {
+        dispatch(setLoading(true));
+        setTimeout(() => {
+            dispatch(setLoading(false));
+        }, 2000);
+    };
+
     const handleSubmit = async (event) => {
         event.preventDefault();
 
         const novoCliente = {
-            NOME: nome,
+            NOME: nome.toUpperCase(),
             CONTATO: contato,
             CPF: cpf,
-            DATADENASCIMENTO: dataDeNascimento,
+            DATADENASCIMENTO: formatDate(dataDeNascimento),
+            CODC: gerarStringAleatoria(7),
             ENDERECO: {
-                RUA: endereco.rua,
-                BAIRRO: endereco.bairro,
+                RUA: endereco.rua.toUpperCase(),
+                BAIRRO: endereco.bairro.toUpperCase(),
                 N: endereco.numero,
                 CEP: endereco.cep,
-                CIDADE: endereco.cidade
+                CIDADE: endereco.cidade.toUpperCase()
             }
         };
 
         try {
             dispatch(cadastrarCliente(novoCliente));
-            // Limpar o formulário após o cadastro, se necessário
+            handleAtivarLoad();
             clearForm();
         } catch (error) {
             console.error('Erro ao cadastrar cliente:', error);

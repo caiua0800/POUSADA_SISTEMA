@@ -3,13 +3,13 @@ import styled from 'styled-components';
 import { useSelector, useDispatch } from 'react-redux';
 import { fetchClientes, selectAllClients } from '../Redux/reducers/Cliente/clientReducer';
 import TabelaClientes from './TabelaClientes';
-import { useNavigate } from 'react-router-dom'; // Importar useNavigate
+import { useNavigate } from 'react-router-dom'; 
 
 export default function Clientes({ onClienteSelect }) {
   const dispatch = useDispatch();
   const [searchTerm, setSearchTerm] = useState('');
   const clients = useSelector(selectAllClients);
-  const navigate = useNavigate(); // Obter a função de navegação
+  const navigate = useNavigate();
 
   useEffect(() => {
     dispatch(fetchClientes());
@@ -32,7 +32,7 @@ export default function Clientes({ onClienteSelect }) {
 
   const handleClienteClick = (cliente) => {
     onClienteSelect(cliente);
-    navigate(`/cliente`, { state: { cliente } }); // Redirecionar para a rota do cliente com o cliente selecionado
+    navigate(`/cliente`, { state: { cliente } }); 
   };
 
   return (

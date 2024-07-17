@@ -1,8 +1,7 @@
-// Importando React e styled-components
+// Tabela1.js
 import React from 'react';
 import styled from 'styled-components';
 
-// Definindo os componentes estilizados
 const Table = styled.table`
   width: 100%;
   border-collapse: collapse;
@@ -26,15 +25,15 @@ const Tr = styled.tr`
   &:nth-child(even) {
     background-color: #00b4d8;
   }
-    background-color: #0096c7;
+  background-color: #0096c7;
 
   &:hover {
     background-color: #ffff;
+    cursor: pointer; // Adicione cursor pointer para indicar interatividade
   }
 `;
 
-// Definindo o componente Tabela1
-const Tabela1 = ({ reservas }) => {
+const Tabela1 = ({ reservas, onReservaSelect }) => {
   return (
     <Table>
       <thead>
@@ -46,10 +45,10 @@ const Tabela1 = ({ reservas }) => {
       </thead>
       <tbody>
         {reservas.map((reserva, index) => (
-          <Tr key={index}>
-            <Td>{reserva.nomeCompleto}</Td>
-            <Td>{reserva.checkin}</Td>
-            <Td>{reserva.checkout}</Td>
+          <Tr key={index} onClick={() => onReservaSelect(reserva)}>
+            <Td>{reserva.cliente.NOME}</Td>
+            <Td>{reserva.CHECKIN}</Td>
+            <Td>{reserva.CHECKOUT}</Td>
           </Tr>
         ))}
       </tbody>

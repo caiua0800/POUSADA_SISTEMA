@@ -1,7 +1,7 @@
 // clientReducer.js
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { db } from '../../../database/firebaseConfig';
-import { collection, getDocs, doc, deleteDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, deleteDoc, updateDoc } from 'firebase/firestore';
 
 const initialState = {
     clients: [],
@@ -28,6 +28,21 @@ export const deleteCliente = createAsyncThunk(
             return clientId;
         } catch (error) {
             console.error('Erro ao excluir cliente:', error.message);
+            throw error;
+        }
+    }
+);
+
+export const editCliente = createAsyncThunk(
+    'clients/editCliente',
+    async (cliente) => {
+        const { id, ...data } = cliente;
+        try {
+            const clientRef = doc(db, 'CLIENTES', id);
+            await updateDoc(clientRef, data);
+            return cliente;
+        } catch (error) {
+            console.error('Erro ao editar cliente:', error.message);
             throw error;
         }
     }
@@ -60,6 +75,20 @@ const clientSlice = createSlice({
                 state.clients = state.clients.filter(client => client.id !== action.payload);
             })
             .addCase(deleteCliente.rejected, (state, action) => {
+                state.status = 'failed';
+                state.error = action.error.message;
+            })
+            .addCase(editCliente.pending, (state) => {
+                state.status = 'loading';
+            })
+            .addCase(editCliente.fulfilled, (state, action) => {
+                state.status = 'succeeded';
+                const index = state.clients.findIndex(client => client.id === action.payload.id);
+                if (index !== -1) {
+                    state.clients[index] = action.payload;
+                }
+            })
+            .addCase(editCliente.rejected, (state, action) => {
                 state.status = 'failed';
                 state.error = action.error.message;
             });

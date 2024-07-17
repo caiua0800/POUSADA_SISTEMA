@@ -1,5 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
+import { useSelector, useDispatch } from 'react-redux';
+import { fetchClientes, selectAllClients } from '../Redux/reducers/Cliente/clientReducer';
+import { FazerReserva } from '../Redux/reducers/Reserva/reservarSlice';
+import { fetchReservas, selectAllReservas } from '../Redux/reducers/Reserva/ReservasSlice';
+import { setLoading } from '../Redux/reducers/Load/loadingSlice';
+import { editCliente } from '../Redux/reducers/Cliente/clientReducer';
+
 
 export default function RealizarReserva() {
     const [nomeCompleto, setNomeCompleto] = useState('');
@@ -16,7 +23,27 @@ export default function RealizarReserva() {
         master: false
     });
     const [reservaConfirmada, setReservaConfirmada] = useState(false);
-    const [valorJaPago, setValorJaPago] = useState('');
+    const [valorJaPago, setValorJaPago] = useState('0');
+    const [valorTotal, setValorTotal] = useState('');
+    const [CODC, setCODC] = useState(null);
+    const [submitStatus, setSubmitStatus] = useState(null); 
+    const [valorEmHaverDoCliente, setValorEmHaverDoCliente] = useState('');
+    const [valorEmHaverDoCliente2, setValorEmHaverDoCliente2] = useState('');
+
+    const dispatch = useDispatch();
+    const clients = useSelector(selectAllClients);
+
+    const handleAtivarLoad = async () => {
+        dispatch(setLoading(true));
+        setTimeout(() => {
+            dispatch(setLoading(false));
+            window.location.href = '/';
+        }, 2000);
+    };
+
+    useEffect(() => {
+        dispatch(fetchClientes());
+    }, [dispatch]);
 
     const handleApartamentoChange = (apartamento) => {
         setApartamentosUsados({
@@ -25,28 +52,133 @@ export default function RealizarReserva() {
         });
     };
 
+    const handleClientSelection = (clientName, codc, contato, clientObj) => {
+        setNomeCompleto(clientName);
+        setCODC(codc)
+        setContato(contato);
+        setClientListOpen(false);
+
+        if(clientObj.CONTEMHAVER){
+            setValorEmHaverDoCliente('Esse cliente contém haver de R$' + clientObj.HAVERVALOR);
+            setValorEmHaverDoCliente2('R$' + clientObj.HAVERVALOR + " de haver adicionados");
+            alert('Esse cliente contém haver de R$' + clientObj.HAVERVALOR);
+
+            setReservaConfirmada(true);
+            setValorJaPago(clientObj.HAVERVALOR);
+        }
+
+    };
+
+
+    const handleInputChange = (e) => {
+        const { value } = e.target;
+        setNomeCompleto(value);
+        setClientListOpen(value.trim().length > 0);
+    };
+
     const handleSubmit = (event) => {
         event.preventDefault();
-        // Aqui você pode implementar a lógica para salvar a reserva
-        console.log({
-            nomeCompleto,
-            contato,
-            checkin,
-            checkout,
-            quantidadePessoas,
-            apartamentosUsados,
-            reservaConfirmada,
-            valorJaPago
-        });
-        // Limpar os campos após submissão (opcional)
-        clearFields();
+
+        // Formatar a data de check-in e check-out para o formato brasileiro
+        const formattedCheckin = formatarData(checkin);
+        const formattedCheckout = formatarData(checkout);
+
+        // Montar o objeto novaReserva com os dados formatados
+        const novaReserva = {
+            CODC,
+            CHECKIN: formattedCheckin,
+            CHECKOUT: formattedCheckout,
+            QUANTIDADEPESSOAS: quantidadePessoas,
+            CHALES: {
+                CAIUA: apartamentosUsados.caiua,
+                MAYRA: apartamentosUsados.mayra,
+                MASTER: apartamentosUsados.master,
+                TRANCOSO: apartamentosUsados.trancoso,
+                GILMAR: apartamentosUsados.gilmar,
+                NATHALIA: apartamentosUsados.nathalia,
+            },
+            CONFIRMACAO: reservaConfirmada,
+            VALORPAGO: valorJaPago,
+            VALORTOTAL: valorTotal,
+        };
+
+        dispatch(FazerReserva(novaReserva))
+            .then(() => {
+                // Atualizar o campo CONTEMHAVER e HAVERVALOR do cliente
+                if (clients) {
+                    const selectedClient = clients.find(client => client.CODC === CODC);
+                    if (selectedClient) {
+                        dispatch(editCliente({
+                            id: selectedClient.id,
+                            CONTEMHAVER: false,
+                            HAVERVALOR: ""
+                        }));
+                    }
+                }
+
+                // Limpar os campos após submissão (opcional)
+                clearFields();
+                setSubmitStatus('success'); // Define o status de sucesso
+                handleAtivarLoad();
+            })
+            .catch((error) => {
+                console.error('Erro ao fazer reserva:', error.message);
+                setSubmitStatus('error'); // Define o status de erro
+            });
     };
+
+    function formatarTelefone(numero) {
+        const digitsOnly = numero.replace(/\D/g, '');
+        if (digitsOnly.length >= 10)
+            return `(${digitsOnly.slice(0, 2)}) ${digitsOnly.slice(2, 7)}-${digitsOnly.slice(7, 11)}`;
+        return numero;
+    }
+
+    function formatarData(dataString) {
+        // Verifica se a string está no formato esperado
+        if (!dataString || typeof dataString !== 'string' || dataString.length !== 10 || dataString[4] !== '-' || dataString[7] !== '-') {
+            throw new Error('Formato de data inválido. Deve ser YYYY-MM-DD.');
+        }
+
+        // Separa a string pelos hífens
+        const partes = dataString.split('-');
+
+        // Monta a data no formato desejado
+        const dia = partes[2];
+        const mes = partes[1];
+        const ano = partes[0];
+
+        return `${dia}/${mes}/${ano}`;
+    }
+
+    const handleValorJaPagoChange = (e) => {
+        let valor = e.target.value;
+    
+        // Se o valor estiver vazio, define como '0'
+        if (valor.trim() === '') {
+            setReservaConfirmada(false);
+        }
+    
+        // Verifica se o valor é um número válido
+        const valorNumerico = parseFloat(valor);
+    
+        if (!isNaN(valorNumerico) && valorNumerico > 0) {
+            setReservaConfirmada(true);
+        } else {
+            setReservaConfirmada(false);
+        }
+        setValorJaPago(valor);
+    }
+    
+    
 
     const clearFields = () => {
         setNomeCompleto('');
         setContato('');
         setCheckin('');
         setCheckout('');
+        setValorTotal('');
+
         setQuantidadePessoas('');
         setApartamentosUsados({
             mayra: false,
@@ -60,32 +192,46 @@ export default function RealizarReserva() {
         setValorJaPago('');
     };
 
+    const [clientListOpen, setClientListOpen] = useState(false);
+
+    const filteredClients = clients.filter(client => client.NOME.toLowerCase().includes(nomeCompleto.toLowerCase()));
+
     return (
         <ReservaContainer>
             <ComponentTitle>REALIZAR RESERVA</ComponentTitle>
+
             <ReservaForm onSubmit={handleSubmit}>
                 <InputLabel>
                     Nome Completo:
                     <input
                         type="text"
                         value={nomeCompleto}
-                        onChange={(e) => setNomeCompleto(e.target.value)}
+                        onChange={handleInputChange}
                         required
                     />
+                    {clientListOpen && (
+                        <ClientList>
+                            {filteredClients.map(client => (
+                                <ClientItem key={client.id} onClick={() => handleClientSelection(client.NOME, client.CODC, client.CONTATO, client)}>
+                                    {client.NOME}
+                                </ClientItem>
+                            ))}
+                        </ClientList>
+                    )}
                 </InputLabel>
+                <span className='haverDoCliente'>{valorEmHaverDoCliente}</span>
                 <InputLabel>
                     Contato:
                     <input
                         type="text"
-                        value={contato}
+                        value={formatarTelefone(contato)}
                         onChange={(e) => setContato(e.target.value)}
-                        required
                     />
                 </InputLabel>
                 <InputLabel>
                     Check-in:
                     <input
-                        type="text"
+                        type="date"
                         value={checkin}
                         onChange={(e) => setCheckin(e.target.value)}
                         required
@@ -94,7 +240,7 @@ export default function RealizarReserva() {
                 <InputLabel>
                     Check-out:
                     <input
-                        type="text"
+                        type="date"
                         value={checkout}
                         onChange={(e) => setCheckout(e.target.value)}
                         required
@@ -162,28 +308,42 @@ export default function RealizarReserva() {
                         </label>
                     </ApartamentosCheckbox>
                 </ApartamentosLabel>
-                <InputLabel className='exceptionLabelInput'>
-                    Reserva Confirmada:
-                    <input className='exceptionInput'
-                        type="checkbox"
-                        checked={reservaConfirmada}
-                        onChange={() => setReservaConfirmada(!reservaConfirmada)}
-                    />
-                </InputLabel>
                 <InputLabel>
                     Valor já Pago:
                     <input
                         type="text"
                         value={valorJaPago}
-                        onChange={(e) => setValorJaPago(e.target.value)}
+                        onChange={(e) => handleValorJaPagoChange(e)}
+                        required
+                    />
+                    <InformeValorHaver>{valorEmHaverDoCliente2}</InformeValorHaver>
+                </InputLabel>
+                <InputLabel>
+                    Valor Total:
+                    <input
+                        type="text"
+                        value={valorTotal}
+                        onChange={(e) => setValorTotal(e.target.value)}
                         required
                     />
                 </InputLabel>
                 <SubmitButton type="submit">Realizar Reserva</SubmitButton>
             </ReservaForm>
+            {submitStatus === 'success' && (
+                <SuccessMessage>Reserva realizada com sucesso!</SuccessMessage>
+            )}
+            {submitStatus === 'error' && (
+                <ErrorMessage>Ocorreu um erro ao fazer a reserva. Por favor, tente novamente.</ErrorMessage>
+            )}
         </ReservaContainer>
     );
 }
+
+
+const InformeValorHaver = styled.span`
+    color: red;
+    text-align: center;
+`;
 
 const ReservaContainer = styled.div`
     width: 100%;
@@ -211,6 +371,10 @@ const ReservaForm = styled.form`
     flex-direction: column;
     align-items: center;
     gap: 10px;
+
+    .haverDoCliente{
+        color: red;
+    }
 `;
 
 const InputLabel = styled.label`
@@ -218,22 +382,49 @@ const InputLabel = styled.label`
     display: flex;
     flex-direction: column;
     width: 100%;
+    position: relative;
     font-weight: 600;
     margin-bottom: 5px;
     box-sizing: border-box;
-    
-    input{
-        height: 30px;    
+
+    input {
+        height: 30px;
         box-sizing: border-box;
     }
 
-    .exceptionInput{
-        height: 20px;    
-    
+    .exceptionInput {
+        height: 20px;
     }
 
-    .exceptionLabelInput{
+    .exceptionLabelInput {
         background-color: black;
+    }
+`;
+
+const ClientList = styled.ul`
+    position: absolute;
+    top: calc(100% + 5px);
+    left: 0;
+    z-index: 10;
+    width: 100%;
+    background-color: #ffffff;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    max-height: 150px;
+    overflow-y: auto;
+    padding: 5px 0;
+    box-sizing: border-box;
+`;
+
+const ClientItem = styled.li`
+    cursor: pointer;
+    padding: 5px;
+    list-style-type: none;
+    transition: background-color 0.3s ease;
+    color: black;
+
+    &:hover {
+        background-color: #f0f0f0;
     }
 `;
 
@@ -276,4 +467,16 @@ const SubmitButton = styled.button`
     &:hover {
         background-color: #ade8f4;
     }
+`;
+
+const SuccessMessage = styled.p`
+    color: green;
+    font-weight: bold;
+    margin-top: 10px;
+`;
+
+const ErrorMessage = styled.p`
+    color: red;
+    font-weight: bold;
+    margin-top: 10px;
 `;
