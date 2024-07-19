@@ -626,7 +626,10 @@ const ModalEdicaoContent = styled.div`
   background: #fff;
   padding: 20px;
   border-radius: 8px;
-  width: 500px;
+  width: 90%;
+  box-sizing: border-box;
+  height: 90%;
+  overflow: scroll;
   display: flex;
   flex-direction: column;
   gap: 20px;

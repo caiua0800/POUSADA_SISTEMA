@@ -24,7 +24,7 @@ export default function SideBar({ NAV_LINKS }) {
           src="https://firebasestorage.googleapis.com/v0/b/white-lable-528b0.appspot.com/o/assets%2Fmenu-icon-blue.png?alt=media&token=7450779f-3169-436f-9076-fa5a36540c67"
           expanded={expanded}
         />
-        {expanded ? "" : <VerticalText>SideBar</VerticalText>}
+        menu
       </ToggleButton>
       <SideBarContainer expanded={expanded}>
         <>
